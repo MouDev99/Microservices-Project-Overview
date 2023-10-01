@@ -1,0 +1,39 @@
+version: "3.8"
+
+services:
+  api:
+    build: .
+    image: flaskapp
+    ports:
+      - "5000:5000"
+    environment:
+      - FLASK_APP=${FLASK_APP}
+      - FLASK_ENV=${FLASK_ENV}
+    networks:
+      - pgflaskapp
+    volumes:
+      - ".:/app"
+    depends_on:
+      - db
+    command: ["/bin/bash", "entrypoint.sh"]
+
+  db:
+    image: postgres:12-alpine
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - DATABASE_URL=${DATABASE_URL}
+    volumes:
+      - postgres-db:/var/lib/postgresql/data
+    networks:
+      pgflaskapp:
+        aliases:
+          - "postgres"
+
+
+networks:
+  pgflaskapp:
+    driver: bridge
+volumes:
+  postgres-db:

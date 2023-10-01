@@ -1,5 +1,6 @@
 
 const express = require('express');
+const fetch = require('cross-fetch');
 const csrf = require('csurf');
 const { check, validationResult } = require('express-validator');
 
@@ -10,6 +11,8 @@ const router = express.Router();
 const csrfProtection = csrf({ cookie: true });
 
 const asyncHandler = (handler) => (req, res, next) => handler(req, res, next).catch(next);
+
+const flskAppBaseUrl =  'http://host.docker.internal:5000';
 
 router.get('/', asyncHandler(async (req, res) => {
   const books = await db.Book.findAll({ order: [['title', 'ASC']] });
@@ -96,6 +99,42 @@ router.get('/book/edit/:id(\\d+)', csrfProtection,
       book,
       csrfToken: req.csrfToken(),
     });
+  }));
+
+router.get('/book/details/:id', csrfProtection,
+  asyncHandler(async (req, res) => {
+    const bookId = parseInt(req.params.id, 10);
+    const book = await db.Book.findByPk(bookId);
+    const ratingsResponse = await fetch(`${flskAppBaseUrl}/ratings/${bookId}`)
+    const ratingsData = await ratingsResponse.json();
+
+    const stars = ['☆', '☆', '☆', '☆', '☆'];
+    let i = 0;
+    while (i < parseInt(ratingsData.average)) {
+      stars[i] = '★'
+      i++;
+    }
+
+    book.averageRating = ratingsData.average || 0
+    book.ratings = ratingsData.ratings || []
+    book.stars = stars.join('')
+
+    res.render('book-details', { book, csrfToken: req.csrfToken() });
+  }));
+
+router.post('/book/ratings/:id', csrfProtection,
+  asyncHandler(async (req, res) => {
+    const bookId = req.params.id;
+    const url = `${flskAppBaseUrl}/ratings/${bookId}?email=${req.body.email}&value=${req.body.value}`;
+
+    fetchRes = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-type": "application/x-www-form-urlencoded"
+      },
+    });
+
+    res.redirect(`/book/details/${bookId}`);
   }));
 
 router.post('/book/edit/:id(\\d+)', csrfProtection, bookValidators,

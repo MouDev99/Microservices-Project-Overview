@@ -1,0 +1,21 @@
+extends layout.pug
+
+include utils.pug
+
+block content
+  +validationErrorSummary(errors)
+  div(class='py-3')
+    h1= book.title
+    each key in Object.keys(book.dataValues)
+      if ! ["id", "title", "createdAt", "updatedAt"].includes(key)
+        - const capitalizedKey = key.charAt(0).toUpperCase() + key.slice(1)
+        p= `${capitalizedKey}: ${book.dataValues[key]}`
+
+    span(style="font-size: 25px;")= "User Rating " + book.stars
+      p(style="font-size: 20px;")= book.averageRating + " average based on " + book.ratings.length + " reviews."
+
+  form(action=`/book/ratings/${book.id}`, method="post")
+    input(type='hidden' name='_csrf' value=csrfToken)
+    +textField('Email', 'email')
+    +textField('Value', 'value')
+    button(type='submit' class='btn btn-primary') Rate
